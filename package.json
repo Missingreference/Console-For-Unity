@@ -1,0 +1,14 @@
+{
+  "name": "com.elanetic.console",
+  "version": "1.0.0",
+  "displayName": "Console For Unity",
+  "description": "An implementation of the Elanetic Console.",
+  "author": {
+    "name": "Elanetic",
+    "email": "Isaac@elanetic.net",
+    "url": "https://www.elanetic.net"
+  },
+  "dependencies": {
+    "com.elanetic.uguiextras": "1.0.0"
+  }
+}
