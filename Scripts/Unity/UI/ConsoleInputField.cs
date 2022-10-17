@@ -206,7 +206,7 @@ namespace Elanetic.Console.Unity.UI
         {
             if(currentSuggestionIndex == -1)
             {
-                GetSuggestions(text, currentSuggestionIndex + 1, 1, ref m_CurrentSuggestions);
+                GetSuggestions(text, currentSuggestionIndex + 1, 2, ref m_CurrentSuggestions);
             }
             else
             {
@@ -217,6 +217,12 @@ namespace Elanetic.Console.Unity.UI
             currentSuggestionIndex++;
 
             string suggestionText = m_CurrentSuggestions[0];
+            if(m_CurrentSuggestions.Count > 1 && text == suggestionText)
+            {
+                currentSuggestionIndex++;
+                suggestionText = m_CurrentSuggestions[1];
+            }
+
             SetTextWithoutNotify(suggestionText);
             caretPosition = suggestionText.Length;
 
