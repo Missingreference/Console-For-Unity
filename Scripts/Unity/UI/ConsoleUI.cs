@@ -59,8 +59,9 @@ namespace Elanetic.Console.Unity.UI
             Image background = gameObject.AddComponent<Image>();
             background.color = new Color(0.5f, 0.5f, 0.5f, 1.0f);
             background.sprite = Resources.Load<Sprite>("Console/Rect_Light_Background_Dark_Border_Step_4");
-            background.pixelsPerUnitMultiplier = 2.0f;
+            background.pixelsPerUnitMultiplier = 3.0f;
             background.type = Image.Type.Sliced;
+            background.maskable = false;
             window = background.gameObject.AddComponent<AdjustableWindow>();
             window.topMoveSize = fontSize + m_Spacing + m_Spacing;
 
@@ -110,8 +111,8 @@ namespace Elanetic.Console.Unity.UI
             outputWindow.color = new Color(0.25f, 0.25f, 0.25f, 1.0f);
             outputWindow.rectTransform.anchorMin = Vector2.zero;
             outputWindow.rectTransform.anchorMax = Vector2.one;
-            outputWindow.rectTransform.offsetMin = Vector2.zero;//defaultFontSize + (m_Spacing * 3.0f));
-            outputWindow.rectTransform.offsetMax = new Vector2(-m_ScrollbarWidth, 0.0f);//-m_Spacing - defaultFontSize);
+            outputWindow.rectTransform.offsetMin = Vector2.zero;
+            outputWindow.rectTransform.offsetMax = new Vector2(-m_ScrollbarWidth, 0.0f);
 
             outputTextArea = outputWindowObject.AddComponent<TextArea>();
             outputTextArea.font = font;
@@ -278,17 +279,18 @@ namespace Elanetic.Console.Unity.UI
             closeButton.transform.SetParent(transform);
             closeButton.transform.localScale = Vector3.one;
             closeButton.transform.localRotation = Quaternion.identity;
+            closeButton.transition = Selectable.Transition.None;
             Image closeButtonImage = closeButton.gameObject.AddComponent<Image>();
-            closeButtonImage.color = new Color(0.235f, 0.235f, 0.235f, 1.0f);
+            closeButtonImage.color = new Color(0.235f, 0.235f, 0.235f, 0.5f);
             closeButton.onClick.AddListener(OnCloseButtonPressed);
             closeButtonImage.rectTransform.anchorMin = Vector2.one;
             closeButtonImage.rectTransform.anchorMax = Vector2.one;
             closeButtonImage.rectTransform.offsetMin = new Vector2(-fontSize - (m_Spacing * 1.5f), -fontSize - (m_Spacing * 0.5f));
             closeButtonImage.rectTransform.offsetMax = new Vector2(-m_Spacing * 1.5f, -m_Spacing*0.5f);
+            closeButtonImage.rectTransform.sizeDelta = new Vector2(16.0f, 16.0f);
 
-            closeButtonImage.sprite = background.sprite;
-            closeButtonImage.type = Image.Type.Sliced;
-            closeButtonImage.pixelsPerUnitMultiplier = 4.0f;
+            closeButtonImage.sprite = null;
+
             closeButtonText = new GameObject("X Text").AddComponent<TextMeshProUGUI>();
             closeButtonText.text = "X";
             closeButtonText.font = font;
