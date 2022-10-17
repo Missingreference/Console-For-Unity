@@ -1,0 +1,3 @@
+[submodule "Scripts/Console"]
+	path = Scripts/Console
+	url = https://github.com/Missingreference/Console.git
