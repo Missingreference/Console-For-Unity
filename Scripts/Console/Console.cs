@@ -116,28 +116,103 @@ namespace Elanetic.Console
         /// </summary>
         static public void Parse(string command)
         {
-            command = command.Trim();
-            string[] splitStrings = command.Split(null as string[], StringSplitOptions.RemoveEmptyEntries);
-
-            if(command == string.Empty || splitStrings.Length == 0)
+            if(command == null)
             {
                 //Nothing to parse
                 return;
             }
 
-            if(splitStrings.Length > 1)
-            {
-                string[] args = new string[splitStrings.Length - 1];
-                Array.Copy(splitStrings, 1, args, 0, args.Length);
+            command = command.Trim();
 
-                Execute(splitStrings[0], args);
-            }
-            else
+            if(command.Length == 0)
             {
-                Execute(splitStrings[0], new string[0]);
+                //Nothing to parse
+                return;
             }
+
+            string commandName = "";
+            int i = 1;
+            for(; i < command.Length; i++)
+            {
+                if(command[i] != ' ') continue;
+
+                commandName = command.Substring(0, i);
+
+                while(command[i] == ' ') i++;
+
+                break;
+            }
+
+            if(commandName == "") commandName = command;
+
+            List<string> splits = new List<string>();
+            for(; i < command.Length; i++)
+            {
+                char character = command[i];
+                if(character == '"' || character == '\'')
+                {
+                    //Start string
+                    int startIndex = i;
+
+                    bool foundEndString = false;
+                    for(int h = i+1; h < command.Length; h++)
+                    {
+                        if(command[h] == character && (h == command.Length-1 || command[h+1] == ' '))
+                        {
+                            if(startIndex != h - 1) //Check if the string is empty
+                            {
+                                foundEndString = true;
+                                startIndex++;
+                                splits.Add(command.Substring(startIndex, h - startIndex));
+                                i = h;
+                            }
+
+                            break;
+                        }
+                    }
+
+                    if(!foundEndString)
+                    {
+                        while(i < command.Length - 1 && command[i + 1] != ' ')
+                        {
+                            i++;
+                        }
+
+                        splits.Add(command.Substring(startIndex, i - startIndex + 1));
+                    }
+                }
+                else
+                {
+                    int startIndex = i;
+                    while(i < command.Length-1 && command[i+1] != ' ')
+                    {
+                        i++;
+                    }
+
+                    splits.Add(command.Substring(startIndex, i - startIndex + 1));
+                }
+
+                if(i < command.Length - 1)
+                {
+                    while(command[i+1] == ' ') i++;
+                }
+            }
+            
+            /*
+            string s = "Command: '" + commandName + "' ";
+            for(i = 0; i < splits.Count; i++)
+            {
+                s += "Arg[" + i.ToString() + "]: '" + splits[i] + "' ";
+            }
+            Console.Log(s);
+            */
+
+            Execute(commandName, splits.ToArray());
         }
 
+        /// <summary>
+        /// Retrieve the ConsoleCommand instance of a loaded command by its name.
+        /// </summary>
         static public ConsoleCommand FindCommandByName(string commandName)
         {
             if(m_CommandLookup.TryGetValue(commandName.ToLower(), out ConsoleCommand command))
@@ -147,12 +222,18 @@ namespace Elanetic.Console
             return null;
         }
 
+        /// <summary>
+        /// Get the names of all of the loaded commands.
+        /// </summary>
         static public string[] GetAllCommands()
         {
             //Copy to array that way the internal list is not modified.
             return m_AllCommandNames.ToArray();
         }
 
+        /// <summary>
+        /// Reinitiliaze all console commands. It is recommended that no references to existing console commands exist before calling this function so that the garbage collector can call the deconstructor on any of those instances before creating new ones.
+        /// </summary>
         static public void ReloadCommands()
         {
             m_CommandLookup = new Dictionary<string, ConsoleCommand>(255);
@@ -221,89 +302,6 @@ namespace Elanetic.Console
             //Add
             m_AllCommandNames.Add(commandName);
             m_CommandLookup.Add(commandName, command);
-        }
-
-        /// <summary>
-        /// Trim the string so that it starts with and ends with a maximum of one Environment.NewLine. Removes extra whitespace as well if a line simply contains whitespace.
-        /// </summary>
-        static private string TrimNewLines(string message)
-        {
-            string newLine = Environment.NewLine;
-            int index = 0;
-            int lastNewLine = -1;
-            bool IsNewLine()
-            {
-                if(index + newLine.Length > message.Length)
-                    return false;
-
-                for(int i = 0; i < newLine.Length; i++)
-                {
-                    if(message[index + i] != newLine[i])
-                        return false;
-                }
-                return true;
-            }
-
-            //Trim start
-
-            while(index < message.Length)
-            {
-                if(message[index] == ' ')
-                {
-                    index++;
-                    continue;
-                }
-                if(IsNewLine())
-                {
-                    lastNewLine = index;
-                    index += newLine.Length;
-                    continue;
-                }
-
-                break;
-            }
-
-            if(index == message.Length) return newLine;
-
-            if(lastNewLine >= 0)
-            {
-                message = message.Remove(0, lastNewLine);
-            }
-
-            //Trim end
-
-            index = message.Length - 1;
-            lastNewLine = -1;
-
-            while(index >= 0)
-            {
-                int oldIndex = index;
-                index = index - newLine.Length + 1;
-                if(IsNewLine())
-                {
-                    lastNewLine = index;
-                    index--;
-                    continue;
-                }
-
-                index = oldIndex;
-
-                if(message[index] == ' ')
-                {
-                    index--;
-                    continue;
-                }
-
-                break;
-            }
-
-            if(lastNewLine >= 0)
-            {
-                int startIndex = lastNewLine + newLine.Length;
-                message = message.Remove(startIndex, message.Length - startIndex);
-            }
-
-            return message;
         }
     }
 }
