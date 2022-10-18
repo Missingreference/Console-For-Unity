@@ -215,9 +215,9 @@ namespace Elanetic.Console.Unity.UI
 
             inputField = inputWindow.gameObject.AddComponent<ConsoleInputField>();
             GameObject textArea = new GameObject("Text Area");
-            textArea.AddComponent<RectMask2D>();
+            inputWindow.gameObject.AddComponent<RectMask2D>();
             textArea.transform.SetParent(inputField.transform);
-            RectTransform textAreaRect = (RectTransform)textArea.transform;
+            RectTransform textAreaRect = textArea.AddComponent<RectTransform>();
             textAreaRect.anchorMin = Vector2.zero;
             textAreaRect.anchorMax = Vector2.one;
             textAreaRect.offsetMin = new Vector2(2.0f, 0.0f);
@@ -239,6 +239,8 @@ namespace Elanetic.Console.Unity.UI
             inputFieldText.fontSize = fontSize;
             inputFieldText.horizontalAlignment = HorizontalAlignmentOptions.Left;
             inputFieldText.verticalAlignment = VerticalAlignmentOptions.Middle;
+            inputFieldText.characterSpacing = 2.0f;
+            inputFieldText.wordSpacing = 5.0f;
             inputField.pointSize = fontSize;
 
             inputField.onValueChanged.AddListener(OnInputValueChanged);
@@ -255,6 +257,8 @@ namespace Elanetic.Console.Unity.UI
             suggestionImage.rectTransform.anchorMax = new Vector2(0.0f, 1.0f);
             suggestionImage.rectTransform.pivot = Vector2.zero;
             suggestionImage.rectTransform.offsetMin = Vector2.zero;
+            suggestionImage.raycastTarget = false;
+            suggestionImage.maskable = false;
 
             suggestionText = new GameObject("Text").AddComponent<TextMeshProUGUI>();
             suggestionText.transform.SetParent(suggestionImage.transform);
@@ -272,6 +276,8 @@ namespace Elanetic.Console.Unity.UI
             suggestionText.rectTransform.anchorMin = Vector2.zero;
             suggestionText.rectTransform.anchorMax = Vector2.zero;
             suggestionText.rectTransform.offsetMin = Vector2.zero;
+            suggestionText.raycastTarget = false;
+            suggestionText.maskable = false;
             suggestionImage.gameObject.SetActive(false);
 
 
