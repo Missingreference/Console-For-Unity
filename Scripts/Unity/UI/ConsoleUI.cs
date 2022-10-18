@@ -217,6 +217,8 @@ namespace Elanetic.Console.Unity.UI
             GameObject textArea = new GameObject("Text Area");
             inputWindow.gameObject.AddComponent<RectMask2D>();
             textArea.transform.SetParent(inputField.transform);
+            textArea.transform.localRotation = Quaternion.identity;
+            textArea.transform.localScale = Vector3.one;
             RectTransform textAreaRect = textArea.AddComponent<RectTransform>();
             textAreaRect.anchorMin = Vector2.zero;
             textAreaRect.anchorMax = Vector2.one;
@@ -227,6 +229,8 @@ namespace Elanetic.Console.Unity.UI
 
             GameObject inputFieldTextObject = new GameObject("Input Text");
             inputFieldTextObject.transform.SetParent(textAreaRect);
+            inputFieldTextObject.transform.localRotation = Quaternion.identity;
+            inputFieldTextObject.transform.localScale = Vector3.one;
             TextMeshProUGUI inputFieldText = inputFieldTextObject.AddComponent<TextMeshProUGUI>();
             inputFieldText.rectTransform.anchorMin = Vector2.zero;
             inputFieldText.rectTransform.anchorMax = Vector2.one;

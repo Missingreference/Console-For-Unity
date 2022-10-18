@@ -164,6 +164,9 @@ namespace Elanetic.Console.Unity
             Canvas canvas = canvasObject.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             CanvasScaler canvasScaler = canvasObject.AddComponent<CanvasScaler>();
+#if UNITY_STANDALONE_OSX
+            canvasScaler.scaleFactor = 2.0f;
+#endif
             GraphicRaycaster graphicRaycaster = canvasObject.AddComponent<GraphicRaycaster>();
             canvas.pixelPerfect = true;
             canvas.sortingOrder = short.MaxValue;
