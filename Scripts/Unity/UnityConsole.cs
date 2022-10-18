@@ -47,6 +47,7 @@ namespace Elanetic.Console.Unity
         static public Action onCheatsEnabled;
 
         static private ConsoleUI m_ConsoleUI;
+        static private GameObject m_EventSystemGameObject;
         static private bool m_AllowCheatCommandExecution = false;
         static private ConcurrentQueue<QueuedCommand> m_CommandQueue = new ConcurrentQueue<QueuedCommand>();
         private struct QueuedCommand
@@ -137,6 +138,9 @@ namespace Elanetic.Console.Unity
                 eventSystem.gameObject.AddComponent<StandaloneInputModule>();
                 GameObject.DontDestroyOnLoad(eventSystem.gameObject);
             }
+
+            SceneManager.sceneUnloaded += OnSceneUnload;
+
             m_ConsoleUI.gameObject.SetActive(true);
 
             m_ConsoleUI.inputField.Select();
@@ -149,6 +153,8 @@ namespace Elanetic.Console.Unity
             {
                 m_ConsoleUI.gameObject.SetActive(false);
             }
+
+            SceneManager.sceneUnloaded -= OnSceneUnload;
         }
 
         static private void CreateConsoleUI()
@@ -165,6 +171,20 @@ namespace Elanetic.Console.Unity
             GameObject consoleUIObject = new GameObject("Console");
             consoleUIObject.transform.SetParent(canvasObject.transform);
             m_ConsoleUI = consoleUIObject.AddComponent<ConsoleUI>();
+
+            //We create this at this point so later we don't get errors when creating gameobjects during OnSceneUnload
+            m_EventSystemGameObject = new GameObject("Event System");
+            GameObject.DontDestroyOnLoad(m_EventSystemGameObject);
+        }
+
+        static private void OnSceneUnload(Scene scene)
+        {
+            if(EventSystem.current == null)
+            {
+                //An event system must always exist so that we can interact with the Console UI
+                EventSystem eventSystem = m_EventSystemGameObject.AddComponent<EventSystem>();
+                m_EventSystemGameObject.AddComponent<StandaloneInputModule>();
+            }
         }
 
         static private void OnUnityLogReceived(string condition, string stackTrace, LogType logType)
