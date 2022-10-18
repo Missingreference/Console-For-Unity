@@ -27,13 +27,19 @@ namespace Elanetic.Console.Unity.Commands
                 return;
             }
 
-            if (!SceneManager.GetSceneByName(args[0]).IsValid())
+            if(int.TryParse(args[0], out int sceneIndex) && sceneIndex >= 0 && sceneIndex < SceneManager.sceneCount)
+            {
+                SceneManager.UnloadSceneAsync(SceneManager.GetSceneAt(sceneIndex));
+            }
+            else if(!SceneManager.GetSceneByName(args[0]).IsValid())
             {
                 Console.Log("No scene with name '" + args[0] + "' is currently loaded.");
                 return;
             }
-
-            SceneManager.UnloadSceneAsync(args[0]);
+            else
+            {
+                SceneManager.UnloadSceneAsync(args[0]);
+            }
         }
     }
 }

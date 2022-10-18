@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -41,8 +42,7 @@ namespace Elanetic.Console.Unity.Commands
                 }
             }
 
-
-            if (!int.TryParse(args[0], out int sceneIndex) || !SceneManager.GetSceneByBuildIndex(sceneIndex).IsValid())
+            if (!int.TryParse(args[0], out int sceneIndex) || sceneIndex < 0 || sceneIndex >= SceneManager.sceneCountInBuildSettings)
             {
                 if (!SceneExistsInBuild(args[0]))
                 {
@@ -67,12 +67,13 @@ namespace Elanetic.Console.Unity.Commands
             }
         }
 
-        private bool SceneExistsInBuild(string sceneName)
+        private bool SceneExistsInBuild(string targetSceneName)
         {
             int builtInSceneCount = SceneManager.sceneCountInBuildSettings;
             for (int i = 0; i < builtInSceneCount; i++)
             {
-                if(SceneManager.GetSceneByBuildIndex(i).name == sceneName)
+                string sceneName = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
+                if(sceneName == targetSceneName)
                     return true;
             }
             return false;

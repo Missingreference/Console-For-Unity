@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -28,11 +29,14 @@ namespace Elanetic.Console.Unity.Commands
             
             for (int i = 0; i < sceneCount; i++)
             {
-                output += "[" + i.ToString() + "] " + SceneManager.GetSceneAt(i).name + "\n";
+                Scene scene = SceneManager.GetSceneAt(i);
+                output += "[" + i.ToString() + "] " + scene.name + "\n";
+                //output += "[" + i.ToString() + "](" + scene.buildIndex + ") '" + scene.name + "' Path: " + scene.path + " Handle: " + scene.handle + " Is SubScene: " + scene.isSubScene + " Is Valid: " + scene.IsValid() + " Is Loaded: " + scene.isLoaded + " Is Dirty: " + scene.isDirty + "\n";
             }
 
             output += "\n";
 
+            //Output Built-In Scenes
             sceneCount = SceneManager.sceneCountInBuildSettings;
 
             if(sceneCount == 1)
@@ -46,7 +50,9 @@ namespace Elanetic.Console.Unity.Commands
 
             for (int i = 0; i < sceneCount; i++)
             {
-                output += "[" + i.ToString() + "] " + SceneManager.GetSceneByBuildIndex(i).name + "\n";
+                string sceneName = Path.GetFileNameWithoutExtension(SceneUtility.GetScenePathByBuildIndex(i));
+
+                output += "[" + i.ToString() + "] " + sceneName + "\n";
             }
 
             Console.Log(output);
