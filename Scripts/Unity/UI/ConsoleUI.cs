@@ -337,6 +337,13 @@ namespace Elanetic.Console.Unity.UI
             inputField.SetSuggestions(Console.GetAllCommands());
         }
 
+        void OnDestroy()
+        {
+            Console.onOutputLog -= OnConsoleLog;
+            Console.onOutputWarning -= OnConsoleWarning;
+            Console.onOutputError -= OnConsoleError;
+        }
+
         public void Clear()
         {
             currentCharacterCount = 0;
