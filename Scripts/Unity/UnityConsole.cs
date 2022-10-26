@@ -88,8 +88,6 @@ namespace Elanetic.Console.Unity
             m_SecondaryLogQueue = new Queue<ConsoleLogEntry>();
             m_CharData = new char[25000];
             m_ColorData = new Color32[25000];
-
-            Debug.Log("Static call");
         }
 
         static public void QueueCommand(UnityCommand command, params string[] args)
