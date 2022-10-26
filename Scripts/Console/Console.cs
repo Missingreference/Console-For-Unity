@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using System.Reflection;
+using System.Threading;
 
 namespace Elanetic.Console
 {
@@ -28,6 +29,8 @@ namespace Elanetic.Console
         static private Dictionary<string, ConsoleCommand> m_CommandLookup = new Dictionary<string, ConsoleCommand>(255);
         static private List<string> m_AllCommandNames = new List<string>(255);
 
+        static private object m_LockObject = new object();
+
         static Console()
         {
             ReloadCommands();
@@ -38,7 +41,10 @@ namespace Elanetic.Console
         /// </summary>
         static public void Print(object message)
         {
-            onOutputLog?.Invoke(message.ToString());
+            lock(m_LockObject)
+            {
+                onOutputLog?.Invoke(message.ToString());
+            }
         }
 
         /// <summary>
@@ -46,7 +52,10 @@ namespace Elanetic.Console
         /// </summary>
         static public void PrintWarning(object message)
         {
-            onOutputWarning?.Invoke(message.ToString());
+            lock (m_LockObject)
+            {
+                onOutputWarning?.Invoke(message.ToString());
+            }
         }
 
         /// <summary>
@@ -54,7 +63,10 @@ namespace Elanetic.Console
         /// </summary>
         static public void PrintError(object message)
         {
-            onOutputError?.Invoke(message.ToString());
+            lock (m_LockObject)
+            {
+                onOutputError?.Invoke(message.ToString());
+            }
         }
 
         /// <summary>
@@ -62,12 +74,15 @@ namespace Elanetic.Console
         /// </summary>
         static public void Log(object message)
         {
-            string messageString = message.ToString();
-            if(!messageString.EndsWith(Environment.NewLine))
+            lock (m_LockObject)
             {
-                messageString += Environment.NewLine;
+                string messageString = message.ToString();
+                if (!messageString.EndsWith(Environment.NewLine))
+                {
+                    messageString += Environment.NewLine;
+                }
+                onOutputLog?.Invoke(messageString);
             }
-            onOutputLog?.Invoke(messageString);
         }
 
         /// <summary>
@@ -75,12 +90,15 @@ namespace Elanetic.Console
         /// </summary>
         static public void LogWarning(object message)
         {
-            string messageString = message.ToString();
-            if(!messageString.EndsWith(Environment.NewLine))
+            lock (m_LockObject)
             {
-                messageString += Environment.NewLine;
+                string messageString = message.ToString();
+                if (!messageString.EndsWith(Environment.NewLine))
+                {
+                    messageString += Environment.NewLine;
+                }
+                onOutputWarning?.Invoke(messageString);
             }
-            onOutputWarning?.Invoke(messageString);
         }
 
         /// <summary>
@@ -88,12 +106,15 @@ namespace Elanetic.Console
         /// </summary>
         static public void LogError(object message)
         {
-            string messageString = message.ToString();
-            if(!messageString.EndsWith(Environment.NewLine))
+            lock (m_LockObject)
             {
-                messageString += Environment.NewLine;
+                string messageString = message.ToString();
+                if (!messageString.EndsWith(Environment.NewLine))
+                {
+                    messageString += Environment.NewLine;
+                }
+                onOutputError?.Invoke(messageString);
             }
-            onOutputError?.Invoke(messageString);
         }
 
         /// <summary>
@@ -101,14 +122,17 @@ namespace Elanetic.Console
         /// </summary>
         static public void Execute(string commandName, params string[] args)
         {
-            ConsoleCommand command = FindCommandByName(commandName);
-            if(command == null)
+            lock (m_LockObject)
             {
-                Log("'" + commandName + "' command could not be found.");
-                return;
-            }
+                ConsoleCommand command = FindCommandByName(commandName);
+                if (command == null)
+                {
+                    Log("'" + commandName + "' command could not be found.");
+                    return;
+                }
 
-            command.Execute(args);
+                command.Execute(args);
+            }
         }
 
         /// <summary>
@@ -215,9 +239,12 @@ namespace Elanetic.Console
         /// </summary>
         static public ConsoleCommand FindCommandByName(string commandName)
         {
-            if(m_CommandLookup.TryGetValue(commandName.ToLower(), out ConsoleCommand command))
+            lock(m_LockObject)
             {
-                return command;
+                if (m_CommandLookup.TryGetValue(commandName.ToLower(), out ConsoleCommand command))
+                {
+                    return command;
+                }
             }
             return null;
         }
@@ -236,42 +263,45 @@ namespace Elanetic.Console
         /// </summary>
         static public void ReloadCommands()
         {
-            m_CommandLookup = new Dictionary<string, ConsoleCommand>(255);
-            m_AllCommandNames = new List<string>(255);
-
-            //Clean up created commands
-            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
-
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-            for(int i = 0; i < assemblies.Length; i++)
+            lock (m_LockObject)
             {
-                Assembly assembly = assemblies[i];
-                Type[] types = assembly.GetTypes();
-                for(int h = 0; h < types.Length; h++)
-                {
-                    Type type = types[h];
-                    if(type.IsSubclassOf(typeof(ConsoleCommand)) && !type.IsAbstract)
-                    {
-                        ConsoleCommand command;
-                        try
-                        {
-                            command = (ConsoleCommand)Activator.CreateInstance(type);
-                        }
-                        catch(Exception exception)
-                        {
-                            LogError("Exception: " + exception.Message + " \nStackTrace: " + exception.StackTrace);
-                            LogError("Console Command class '" + type.Name + "' threw an exception while creating an instance of the command and will not be loaded.");
-                            continue;
-                        }
+                m_CommandLookup = new Dictionary<string, ConsoleCommand>(255);
+                m_AllCommandNames = new List<string>(255);
 
-                        LoadCommand(command);
+                //Clean up created commands
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true);
+
+                Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                for (int i = 0; i < assemblies.Length; i++)
+                {
+                    Assembly assembly = assemblies[i];
+                    Type[] types = assembly.GetTypes();
+                    for (int h = 0; h < types.Length; h++)
+                    {
+                        Type type = types[h];
+                        if (type.IsSubclassOf(typeof(ConsoleCommand)) && !type.IsAbstract)
+                        {
+                            ConsoleCommand command;
+                            try
+                            {
+                                command = (ConsoleCommand)Activator.CreateInstance(type);
+                            }
+                            catch (Exception exception)
+                            {
+                                LogError("Exception: " + exception.Message + " \nStackTrace: " + exception.StackTrace);
+                                LogError("Console Command class '" + type.Name + "' threw an exception while creating an instance of the command and will not be loaded.");
+                                continue;
+                            }
+
+                            LoadCommand(command);
+                        }
                     }
                 }
+
+                m_AllCommandNames.Sort();
+
+                Log(m_AllCommandNames.Count.ToString() + " commands loaded.");
             }
-
-            m_AllCommandNames.Sort();
-
-            Log(m_AllCommandNames.Count.ToString() + " commands loaded.");
         }
 
         static private void LoadCommand(ConsoleCommand command)
