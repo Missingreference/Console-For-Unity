@@ -2,11 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
+using System.Collections.Concurrent;
 
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
+using Unity.Collections.LowLevel.Unsafe;
 
 using Elanetic.UI.Unity;
 
@@ -21,7 +24,14 @@ namespace Elanetic.Console.Unity.UI
         public float fontSize { get; private set; } = 12.0f;
 
         //Settings
-        public int maxCharacters { get; set; } = 25000;
+        public int maxCharacters
+        {
+            get => m_MaxCharacters;
+            set
+            {
+                m_MaxCharacters = value;
+            }
+        }
         public int suggestionCount { get; set; } = 5;
 
         //UI References
@@ -41,6 +51,7 @@ namespace Elanetic.Console.Unity.UI
         public TextMeshProUGUI closeButtonText { get; private set; }
         public TextMeshProUGUI suggestionText { get; private set; }
 
+        private int m_MaxCharacters = 25000;
         private float m_Spacing = 8.0f;
         private float m_ScrollbarWidth = 16.0f;
 
@@ -321,10 +332,6 @@ namespace Elanetic.Console.Unity.UI
             outputTextArea.scrollBar = scrollBar;
 
             window.minSize = new Vector2((m_Spacing * 2.0f) + m_ScrollbarWidth + (fontSize * 8.0f), (m_Spacing * 3.0f) + (m_ScrollbarWidth * 5.0f) + (fontSize * 3.0f));
-
-            Console.onOutputLog += OnConsoleLog;
-            Console.onOutputWarning += OnConsoleWarning;
-            Console.onOutputError += OnConsoleError;
         }
 
         void Start()
@@ -335,13 +342,6 @@ namespace Elanetic.Console.Unity.UI
 
             //If you plan to call Console.ReloadCommands then you will need to ensure that you call this again afterwards
             inputField.SetSuggestions(Console.GetAllCommands());
-        }
-
-        void OnDestroy()
-        {
-            Console.onOutputLog -= OnConsoleLog;
-            Console.onOutputWarning -= OnConsoleWarning;
-            Console.onOutputError -= OnConsoleError;
         }
 
         public void Clear()
@@ -401,22 +401,10 @@ namespace Elanetic.Console.Unity.UI
             fontSize = size;
         }
 
-        private void OnConsoleLog(string message)
+        public void OutputText(char[] charData, Color32[] colorData, int length)
         {
-            if (outputTextArea.lastLineIndex - outputTextArea.targetLineIndex <= 4)
-            {
-                outputTextArea.autoScrollToBottom = true;
-            }
-            else
-            {
-                outputTextArea.autoScrollToBottom = false;
-            }
-            OutputText(message, Color.white);
-        }
 
-        private void OnConsoleWarning(string message)
-        {
-            if (outputTextArea.lastLineIndex - outputTextArea.targetLineIndex <= 4)
+            if(outputTextArea.lastLineIndex - outputTextArea.targetLineIndex <= 4)
             {
                 outputTextArea.autoScrollToBottom = true;
             }
@@ -424,33 +412,34 @@ namespace Elanetic.Console.Unity.UI
             {
                 outputTextArea.autoScrollToBottom = false;
             }
-            OutputText(message, Color.yellow);
-        }
 
-        private void OnConsoleError(string message)
-        {
-            if (outputTextArea.lastLineIndex - outputTextArea.targetLineIndex <= 4)
+
+            currentCharacterCount += length;
+            if(currentCharacterCount > maxCharacters)
             {
-                outputTextArea.autoScrollToBottom = true;
+                int amountToRemove = currentCharacterCount - maxCharacters;
+                outputTextArea.RemoveText(0, amountToRemove);
+                currentCharacterCount -= amountToRemove;
             }
-            else
-            {
-                outputTextArea.autoScrollToBottom = false;
-            }
-            OutputText(message, Color.red);
+
+            outputTextArea.Append(charData, colorData, 0, length);
+
+            int maxLines = 256;
+            float perc = 1.0f - ((float)(outputTextArea.lineCount - outputTextArea.maxVisibleLineCount) / (float)maxLines);
+            scrollBar.size = Mathf.Clamp(perc, 0.1f, 1.0f);
         }
 
         private void OutputText(string message, Color color)
         {
-            outputTextArea.Append(message, color);
-
             currentCharacterCount += message.Length;
             if(currentCharacterCount > maxCharacters)
             {
                 int amountToRemove = currentCharacterCount - maxCharacters;
-                outputTextArea.RemoveText(0, currentCharacterCount - maxCharacters);
+                outputTextArea.RemoveText(0, amountToRemove);
                 currentCharacterCount -= amountToRemove;
             }
+
+            outputTextArea.Append(message, color);
 
             int maxLines = 256;
             float perc = 1.0f - ((float)(outputTextArea.lineCount - outputTextArea.maxVisibleLineCount) / (float)maxLines);

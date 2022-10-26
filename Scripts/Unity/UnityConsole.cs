@@ -10,6 +10,8 @@ using TMPro;
 using UnityEngine.SceneManagement;
 
 using Elanetic.Console.Unity.UI;
+using static Elanetic.Console.Unity.UI.ConsoleUI;
+using Unity.Collections.LowLevel.Unsafe;
 
 namespace Elanetic.Console.Unity
 {
@@ -56,15 +58,38 @@ namespace Elanetic.Console.Unity
             public string[] args;
         }
 
+        static private object m_LockObject = new object();
+        static private Queue<ConsoleLogEntry> m_PrimaryLogQueue { get; set; }
+        static private Queue<ConsoleLogEntry> m_SecondaryLogQueue { get; set; }
+        static private int m_DataLength = 0;
+        static private char[] m_CharData;
+        static private Color32[] m_ColorData;
+
+        private struct ConsoleLogEntry
+        {
+            public string message;
+            public Color32 color;
+        }
+
         static UnityConsole()
         {
 #if UNITY_EDITOR
             m_AllowCheatCommandExecution = true;
 #endif
-            //Called on Unity's main thread
-            Application.logMessageReceived += OnUnityLogReceived;
+
+            Console.onOutputLog += OnConsoleLog;
+            Console.onOutputWarning += OnConsoleWarning;
+            Console.onOutputError += OnConsoleError;
+
             //Can be called from any thread
-            //Application.logMessageReceivedThreaded += OnUnityLogReceived;
+            Application.logMessageReceivedThreaded += OnUnityLogReceived;
+
+            m_PrimaryLogQueue = new Queue<ConsoleLogEntry>();
+            m_SecondaryLogQueue = new Queue<ConsoleLogEntry>();
+            m_CharData = new char[25000];
+            m_ColorData = new Color32[25000];
+
+            Debug.Log("Static call");
         }
 
         static public void QueueCommand(UnityCommand command, params string[] args)
@@ -178,6 +203,23 @@ namespace Elanetic.Console.Unity
             //We create this at this point so later we don't get errors when creating gameobjects during OnSceneUnload
             m_EventSystemGameObject = new GameObject("Event System");
             GameObject.DontDestroyOnLoad(m_EventSystemGameObject);
+
+
+            if(m_ConsoleCommandExecutor == null)
+            {
+                m_ConsoleCommandExecutor = new GameObject("Console Executor").AddComponent<UnityCommandExecutor>();
+                m_ConsoleCommandExecutor.gameObject.hideFlags = HideFlags.HideAndDontSave | HideFlags.HideInInspector;
+                GameObject.DontDestroyOnLoad(m_ConsoleCommandExecutor.gameObject);
+
+                lock(m_LockObject)
+                {
+                    if(m_PrimaryLogQueue.Count == 0)
+                    {
+                        m_ConsoleCommandExecutor.enabled = false;
+                    }
+                }
+                m_ConsoleCommandExecutor.enabled = true;
+            }
         }
 
         static private void OnSceneUnload(Scene scene)
@@ -187,6 +229,30 @@ namespace Elanetic.Console.Unity
                 //An event system must always exist so that we can interact with the Console UI
                 EventSystem eventSystem = m_EventSystemGameObject.AddComponent<EventSystem>();
                 m_EventSystemGameObject.AddComponent<StandaloneInputModule>();
+            }
+        }
+
+        static private void OnConsoleLog(string message)
+        {
+            lock(m_LockObject)
+            {
+                m_PrimaryLogQueue.Enqueue(new ConsoleLogEntry() { message = message, color = Color.white });
+            }
+        }
+
+        static private void OnConsoleWarning(string message)
+        {
+            lock(m_LockObject)
+            {
+                m_PrimaryLogQueue.Enqueue(new ConsoleLogEntry() { message = message, color = Color.yellow });
+            }
+        }
+
+        static private void OnConsoleError(string message)
+        {
+            lock(m_LockObject)
+            {
+                m_PrimaryLogQueue.Enqueue(new ConsoleLogEntry() { message = message, color = Color.red });
             }
         }
 
@@ -212,6 +278,60 @@ namespace Elanetic.Console.Unity
             }
         }
 
+        static private void AppendEntry(string message, Color32 color)
+        {
+            unsafe
+            {
+                int m_MaxCharacters = 25000;
+                int messageLength = message.Length;
+                if(messageLength >= m_MaxCharacters)
+                {
+                    fixed(char* dest = &m_CharData[0])
+                    fixed(char* src = message)
+                        UnsafeUtility.MemCpy(dest, src + (messageLength - m_MaxCharacters), m_MaxCharacters * 2);
+
+                    fixed(Color32* dest = &m_ColorData[0])
+                        UnsafeUtility.MemCpyReplicate(dest, &color, 4, m_MaxCharacters);
+
+                    m_DataLength = m_MaxCharacters;
+                }
+                else if(m_DataLength + messageLength > m_MaxCharacters)
+                {
+                    int srcIndex = messageLength - (m_MaxCharacters - m_DataLength);
+                    //Move data
+                    fixed(char* dest = &m_CharData[0])
+                    fixed(char* src = &m_CharData[srcIndex])
+                        UnsafeUtility.MemMove(dest, src, (m_MaxCharacters - srcIndex) * 2);
+
+                    fixed(Color32* dest = &m_ColorData[0])
+                    fixed(Color32* src = &m_ColorData[srcIndex])
+                        UnsafeUtility.MemMove(dest, src, (m_MaxCharacters - srcIndex) * 4);
+
+                    int destIndex = m_MaxCharacters - messageLength;
+                    fixed(char* src = message)
+                    fixed(char* dest = &m_CharData[destIndex])
+                        UnsafeUtility.MemCpy(dest, src, messageLength * 2);
+
+                    fixed(Color32* dest = &m_ColorData[destIndex])
+                        UnsafeUtility.MemCpyReplicate(dest, &color, 4, messageLength);
+
+                    m_DataLength = m_MaxCharacters;
+                }
+                else
+                {
+                    fixed(char* src = message)
+                    fixed(char* dest = &m_CharData[m_DataLength])
+                        UnsafeUtility.MemCpy(dest, src, messageLength * 2);
+
+                    fixed(Color32* dest = &m_ColorData[m_DataLength])
+                        UnsafeUtility.MemCpyReplicate(dest, &color, 4, messageLength);
+
+                    m_DataLength += messageLength;
+                }
+
+            }
+        }
+
         static private UnityCommandExecutor m_ConsoleCommandExecutor = null;
 
         //Handle command execution here
@@ -221,11 +341,33 @@ namespace Elanetic.Console.Unity
 
             private void Update()
             {
-                
                 ExecuteCommands();
 
+                lock(m_LockObject)
+                {
+                    if(m_PrimaryLogQueue.Count == 0) return;
+
+                    Queue<ConsoleLogEntry> hold = m_PrimaryLogQueue;
+                    m_PrimaryLogQueue = m_SecondaryLogQueue;
+                    m_SecondaryLogQueue = hold;
+                }
+
+                if(consoleUI != null)
+                {
+                    while(m_SecondaryLogQueue.TryDequeue(out ConsoleLogEntry entry))
+                    {
+                        AppendEntry(entry.message, entry.color);
+                    }
+
+                    if(m_DataLength > 0)
+                    {
+                        consoleUI.OutputText(m_CharData, m_ColorData, m_DataLength);
+                        m_DataLength = 0;
+                    }
+                }
+
                 //Disable so that we removed the overhead of calling update every frame
-                enabled = false;
+                //enabled = false;
             }
         }
     }
