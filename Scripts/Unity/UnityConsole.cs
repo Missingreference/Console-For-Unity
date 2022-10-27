@@ -142,7 +142,25 @@ namespace Elanetic.Console.Unity
                 }
                 catch (Exception ex)
                 {
-                    Console.LogError("Error occurred while executing command '" + queuedCommand.command.name + "': " + ex.GetType().Name + ": " + ex.Message);
+                    string errorMessage = "Exception occurred while executing command '" + queuedCommand.command.name + "'.\n";
+                    errorMessage += ex.GetType().Name + ": " + ex.Message + "\n\n";
+                    errorMessage += "Stacktrace: " + ex.StackTrace;
+
+                    Exception currentException = ex;
+                    while(currentException.InnerException != null)
+                    {
+                        currentException = currentException.InnerException;
+                        errorMessage += "\n\n";
+                        errorMessage += "Inner Exception: ";
+                        errorMessage += currentException.GetType().Name + ": " + currentException.Message;
+                        if(!string.IsNullOrWhiteSpace(currentException.StackTrace))
+                            errorMessage += "\n\nStacktrace: " + currentException.StackTrace;
+                    }
+
+                    errorMessage += "\n";
+
+                    Console.LogError(errorMessage);
+
                 }
             }
         }
