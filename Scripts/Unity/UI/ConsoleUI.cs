@@ -24,6 +24,9 @@ namespace Elanetic.Console.Unity.UI
         public float fontSize { get; private set; } = 12.0f;
 
         //Settings
+        /// <summary>
+        /// The maximum amount of characters the window will hold before deleting text to make room.
+        /// </summary>
         public int maxCharacters
         {
             get => m_MaxCharacters;
@@ -32,6 +35,27 @@ namespace Elanetic.Console.Unity.UI
                 m_MaxCharacters = value;
             }
         }
+
+        /// <summary>
+        /// The amount of characters to delete to make room for new text to be appended. 
+        /// If the newest entry to append is bigger than this value then that amount of text will be removed instead. This leads to a potential perfomance issue if chunkDeleteAmount value is too small.
+        /// </summary>
+        public int chunkDeleteAmount
+        {
+            get => m_ChunkDeleteAmount;
+            set
+            {
+                if(value < 0)
+                {
+                    m_ChunkDeleteAmount = 0;
+                }
+                else
+                {
+                    m_ChunkDeleteAmount = value;
+                }
+            }
+        }
+
         public int suggestionCount { get; set; } = 5;
 
         //UI References
@@ -52,6 +76,7 @@ namespace Elanetic.Console.Unity.UI
         public TextMeshProUGUI suggestionText { get; private set; }
 
         private int m_MaxCharacters = 25000;
+        private int m_ChunkDeleteAmount = 2500;
         private float m_Spacing = 8.0f;
         private float m_ScrollbarWidth = 16.0f;
 
@@ -418,6 +443,10 @@ namespace Elanetic.Console.Unity.UI
             if(currentCharacterCount > maxCharacters)
             {
                 int amountToRemove = currentCharacterCount - maxCharacters;
+                if(amountToRemove < chunkDeleteAmount)
+                {
+                    amountToRemove = chunkDeleteAmount;
+                }
                 outputTextArea.RemoveText(0, amountToRemove);
                 currentCharacterCount -= amountToRemove;
             }
@@ -435,6 +464,10 @@ namespace Elanetic.Console.Unity.UI
             if(currentCharacterCount > maxCharacters)
             {
                 int amountToRemove = currentCharacterCount - maxCharacters;
+                if(amountToRemove < chunkDeleteAmount)
+                {
+                    amountToRemove = chunkDeleteAmount;
+                }
                 outputTextArea.RemoveText(0, amountToRemove);
                 currentCharacterCount -= amountToRemove;
             }
