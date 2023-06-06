@@ -447,9 +447,9 @@ namespace Elanetic.Console.Unity.UI
                 {
                     amountToRemove = chunkDeleteAmount;
                 }
-                if(amountToRemove > currentCharacterCount)
+                if(amountToRemove > currentCharacterCount - length)
                 {
-                    amountToRemove = currentCharacterCount;
+                    amountToRemove = currentCharacterCount - length;
                 }
                 outputTextArea.RemoveText(0, amountToRemove);
                 currentCharacterCount -= amountToRemove;
@@ -472,9 +472,9 @@ namespace Elanetic.Console.Unity.UI
                 {
                     amountToRemove = chunkDeleteAmount;
                 }
-                if(amountToRemove > currentCharacterCount)
+                if(amountToRemove > currentCharacterCount - message.Length)
                 {
-                    amountToRemove = currentCharacterCount;
+                    amountToRemove = currentCharacterCount - message.Length;
                 }
                 outputTextArea.RemoveText(0, amountToRemove);
                 currentCharacterCount -= amountToRemove;
