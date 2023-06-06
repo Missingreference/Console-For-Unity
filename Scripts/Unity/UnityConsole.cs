@@ -351,7 +351,7 @@ namespace Elanetic.Console.Unity
         static private UnityCommandExecutor m_ConsoleCommandExecutor = null;
 
         //Handle command execution here
-        [DefaultExecutionOrder(-9999)]
+        [DefaultExecutionOrder(9999)]
         private class UnityCommandExecutor : MonoBehaviour
         {
 
