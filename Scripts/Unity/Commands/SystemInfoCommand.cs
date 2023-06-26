@@ -129,13 +129,17 @@ namespace Elanetic.Console.Unity.Commands
             {
                 drives = DriveInfo.GetDrives();
             }
+            catch(NotSupportedException)
+            {
+                return "Logical Devices: { Retrieving logical device information is not supported by Unity Engine using IL2CPP. }";
+            }
             catch (UnauthorizedAccessException)
             {
                 return "Logical Devices: { Does not have required permissions. }";
             }
-            catch (IOException)
+            catch(Exception e)
             {
-                return "Logical Devices: { Failed to retrieve information. (IOException) }";
+                return "Logical Devices: { Failed to retrieve information. (" + e.GetType().Name + ") }";
             }
 
             string output = "Logical Devices:\n";
